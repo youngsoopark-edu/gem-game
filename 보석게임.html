@@ -45,7 +45,7 @@
     <div><div class="label">최고 점수</div><div class="value" id="best" style="font-size:18px">0</div></div>
     <button id="hintBtn" class="sub">💡 힌트</button>
     <button id="newBtn">새 게임</button>
-    <div class="help">같은 보석 3개 이상을 가로·세로로 맞추세요.<br>같은 보석 4개를 2×2 사각형으로 모아도 사라집니다(100점).<br>클릭 또는 드래그로 이웃한 보석을 바꿉니다.<br>4개 이상, 연쇄 콤보는 점수와 시간 보너스!</div>
+    <div class="help">같은 보석 3개 이상을 가로·세로로 맞추세요.<br>클릭 또는 드래그로 이웃한 보석을 바꿉니다.<br>4개 이상, 연쇄 콤보는 점수와 시간 보너스!</div>
   </div>
 </div>
 <script>
@@ -85,8 +85,7 @@ function newBoard() {
       let t;
       do { t = rnd(TYPES); } while (
         (c >= 2 && board[r][c-1].t === t && board[r][c-2].t === t) ||
-        (r >= 2 && board[r-1][c].t === t && board[r-2][c].t === t) ||
-        (r >= 1 && c >= 1 && board[r-1][c].t === t && board[r][c-1].t === t && board[r-1][c-1].t === t));
+        (r >= 2 && board[r-1][c].t === t && board[r-2][c].t === t));
       board[r].push(newGem(t, r, c));
     }
   }
@@ -104,15 +103,6 @@ function findMatches() {
     let e = r; while (e + 1 < N && board[e+1][c].t === board[r][c].t) e++;
     if (e - r >= 2) { const g = []; for (let k = r; k <= e; k++) { set.add(k*N+c); g.push(k*N+c); } groups.push(g); }
     r = e + 1;
-  }
-  // 2x2 사각형 매치
-  for (let r = 0; r + 1 < N; r++) for (let c = 0; c + 1 < N; c++) {
-    const t = board[r][c].t;
-    if (board[r][c+1].t === t && board[r+1][c].t === t && board[r+1][c+1].t === t) {
-      const g = [r*N+c, r*N+c+1, (r+1)*N+c, (r+1)*N+c+1];
-      g.square = true;
-      g.forEach(k => set.add(k)); groups.push(g);
-    }
   }
   return { set, groups };
 }
@@ -164,15 +154,14 @@ async function resolve() {
     if (set.size === 0) break;
     combo++;
     let gained = 0;
-    for (const g of groups) gained += g.square ? 100 : 10 * g.length + (g.length >= 4 ? 30 * (g.length - 3) : 0);
+    for (const g of groups) gained += 10 * g.length + (g.length >= 4 ? 30 * (g.length - 3) : 0);
     gained *= combo;
     score += gained;
-    const squares = groups.filter(g => g.square).length;
     const bonusTime = groups.filter(g => g.length >= 4).length * 2 + (combo >= 3 ? 1 : 0);
     timeLeft = Math.min(START_TIME, timeLeft + bonusTime);
     // 팝업 위치: 매치 중심
     let sr = 0, sc = 0; set.forEach(k => { sr += Math.floor(k / N); sc += k % N; });
-    popups.push({ x: (sc / set.size + .5) * CELL, y: (sr / set.size + .5) * CELL, text: (squares ? '■ 사각형! ' : '') + '+' + gained + (combo > 1 ? `  x${combo}` : ''), life: 1 });
+    popups.push({ x: (sc / set.size + .5) * CELL, y: (sr / set.size + .5) * CELL, text: '+' + gained + (combo > 1 ? `  x${combo}` : ''), life: 1 });
     set.forEach(k => {
       const r = Math.floor(k / N), c = k % N;
       burst((c + .5) * CELL, (r + .5) * CELL, COLORS[board[r][c].t][0]);
